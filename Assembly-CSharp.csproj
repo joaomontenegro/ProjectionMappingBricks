@@ -48,10 +48,11 @@
   <ItemGroup>
      <Compile Include="Assets\Scripts\EditorControl.cs" />
      <Compile Include="Assets\Scripts\GameControl.cs" />
+     <Compile Include="Assets\Scripts\LightCycleControl.cs" />
      <Compile Include="Assets\Scripts\MainSetup.cs" />
      <Compile Include="Assets\Scripts\MeshUtils.cs" />
      <Compile Include="Assets\Scripts\MouseMonoBehaviour.cs" />
-     <None Include="Assets\mesh.txt" />
+     <None Include="Assets\settings.txt" />
  <Reference Include="UnityEngine.UI">
  <HintPath>E:/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
  </Reference>

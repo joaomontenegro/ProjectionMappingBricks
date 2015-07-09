@@ -9,10 +9,8 @@ public abstract class MouseMonoBehaviour : MonoBehaviour {
 	
 	// Update is called once per frame
 	public void Update () {
-		Vector2 mousePos = Camera.main.ScreenToViewportPoint(Input.mousePosition);
-		mousePos.x -= 0.5f;
-		mousePos.y -= 0.5f;
-		
+		Vector2 mousePos = ScreenToLocalPosition(Input.mousePosition);
+
 		// Mouse button events
 		for (int i = 0; i < 3; i++) {
 			if (Input.GetMouseButtonDown (i)) {
@@ -30,6 +28,19 @@ public abstract class MouseMonoBehaviour : MonoBehaviour {
 		}
 
 		lastMousePos = mousePos;
+	}
+
+	public bool hasKeyModifiers() {
+		return (Input.GetKey (KeyCode.LeftControl)
+			|| Input.GetKey (KeyCode.RightControl)
+			|| Input.GetKey (KeyCode.LeftShift)
+			|| Input.GetKey (KeyCode.RightShift)
+			|| Input.GetKey (KeyCode.RightAlt)
+			|| Input.GetKey (KeyCode.LeftAlt));
+	}
+
+	private Vector2 ScreenToLocalPosition(Vector2 pos) {
+		return Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.localPosition;
 	}
 
 	//**** Mouse Events ****//

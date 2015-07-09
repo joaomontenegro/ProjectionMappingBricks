@@ -63,7 +63,7 @@ public class MeshUtils {
 	// Deforms the given mesh when a drag happens in a certain direction using
 	// the given vertex weights.
 	public void DeformMesh( Mesh mesh, Vector3 dragDirection, float[] vertexWeights) {
-			Vector3[] vertices = mesh.vertices;
+		Vector3[] vertices = mesh.vertices;
 		for (int i = 0; i < vertices.Length; i++) {
 			vertices[i] += dragDirection * vertexWeights[i];
 		}
@@ -97,39 +97,34 @@ public class MeshUtils {
 
 	//**** IO ****//
 	
-	public void SaveMesh(Mesh mesh, string filePath, int nVerticesX, int nVerticesY) {
+	public string GetVerticesString(Mesh mesh) {
 		Vector3[] vertices = mesh.vertices;
-		string text = nVerticesX + " " + nVerticesY;
-		
+		string text = "";
+
 		Vector3 vertex;
 		for (int i = 0; i < vertices.Length; i++) {
 			vertex = vertices[i];
-			text += " " + vertex.x + " " + vertex.y + " " + vertex.z;
+
+			if (i > 0) {
+				text += " ";
+			}
+
+			text += vertex.x + " " + vertex.y + " " + vertex.z;
 		}
 		
-		System.IO.File.WriteAllText (filePath, text);
+		return text;
 	}
 	
-	public void LoadMesh(Mesh mesh, string fileName, int nVerticesX, int nVerticesY) {
-		string[] words = System.IO.File.ReadAllText(fileName).Split(" "[0]);
-		int i = 0;
-		
-		int xRes = int.Parse (words [0]);
-		int yRes = int.Parse (words [1]);
-		
-		if (nVerticesX == xRes && nVerticesY == yRes) {
-			Vector3[] vertices = new Vector3[nVerticesX * nVerticesY];
-			
-			i = 2;
-			for (int v = 0; v < vertices.Length; v++) {
-				vertices [v].x = float.Parse (words [i++]);
-				vertices [v].y = float.Parse (words [i++]);
-				vertices [v].z = float.Parse (words [i++]);
-			}
-			
-			mesh.vertices = vertices;
-		} else {
-			Debug.LogWarning("Invalid Mesh Resolution: " + xRes + ", " + yRes);
+	public void SetVerticesFromString(Mesh mesh, string text) {
+		string[] words = text.Split(" "[0]);
+		Vector3[] vertices = new Vector3[words.Length];
+
+		for (int i = 0; i < vertices.Length; i++) {
+			vertices [i].x = float.Parse (words [i++]);
+			vertices [i].y = float.Parse (words [i++]);
+			vertices [i].z = float.Parse (words [i++]);
 		}
+
+		mesh.vertices = vertices;
 	}
 }
