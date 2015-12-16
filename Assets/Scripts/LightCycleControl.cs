@@ -1,55 +1,67 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class LightCycleControl : MonoBehaviour {
 
-	public Intercection nextIntercetion = new Intercection(0, 0);
+
+public class LightCycleControl : MonoBehaviour {
+	public Intersection nextIntersetion = new Intersection(0, 0);
 	public Direction direction = Direction.Right;
 	public float speed;
+	public float keepDirectionProbability = 0.75f;
+	public int trailCount = 10;
 
 	private GameControl gameControl;
+	private GameObject trail;
+	private Queue trailQueue = new Queue();
 
 	// Use this for initialization
 	void Start () {
-		gameControl = GameObject.Find("Game").GetComponent<GameControl>();
 		Init ();
 	}
-	
+
 	// Update is called once per frame
 	void Update () {
-
 		// Move
-		step ();
+		UpdatePosition ();
 
-		if (gameControl.isAtIntersection(transform.localPosition, nextIntercetion, direction)) {
-			PlaceAtIntersection(); // TODO: only when direction changes?
+		if (gameControl.IsAtIntersection(transform.localPosition, nextIntersetion, direction)) {
 			UpdateDirection();
-			nextIntercetion = gameControl.GetNextIntercection(nextIntercetion, direction);
+			nextIntersetion = gameControl.GetNextIntersection(nextIntersetion, direction);
 		}
 	}
 
-	public void Init() {
-		nextIntercetion.ix = nextIntercetion.iy = 10;
-		PlaceAtIntersection();
+	void Awake(){
+		trail = transform.Find("Trail").gameObject;
 	}
 
-	//TODO: make abstract?
-	public void UpdateDirection() {
-		Direction[] allowedDirections = gameControl.AllowedDirections (nextIntercetion, direction);
-		if (allowedDirections.Length == 0) {
-			return;
-		} else if (allowedDirections.Length == 1) {
-			direction = allowedDirections [0];
-		} else {
-			direction = allowedDirections [Random.Range (0, allowedDirections.Length)];
-		}		
+	public void Init() {
+		gameControl = GameObject.Find("Game").GetComponent<GameControl>();
+		int ix = Random.Range (0, gameControl.nBricksX * 2);
+		int iy = Random.Range (0, gameControl.nBricksY);
+		nextIntersetion =  new Intersection(ix, iy);
+		PlaceAtIntersection();
+		clearTrail();
+	}
+
+	public void SetColor(Color color) {
+		Renderer renderer = transform.GetChild(0).GetChild(0).GetComponent<Renderer>();
+		renderer.material.color = color;
+
+		Renderer trailRenderer = trail.transform.GetChild(0).GetComponent<Renderer>();
+		trailRenderer.material.color = color;
+	}
+
+	public void clearTrail() {
+		while (trailQueue.Count > 0) {
+			GameObject.DestroyImmediate(trailQueue.Dequeue() as GameObject);
+		}
 	}
 
 	/*********** Private **************/
-
-	private void step() {
-		Vector3 localPosition = transform.localPosition;
+	void UpdatePosition() {
 		float stepSize = Time.deltaTime * speed;
+		Vector3 localPosition = transform.localPosition;
+
 		switch (direction) {
 		case Direction.Up:
 			localPosition.y += stepSize;
@@ -66,9 +78,80 @@ public class LightCycleControl : MonoBehaviour {
 		}
 
 		transform.localPosition = localPosition;
+
+		UpdateTrailScale(stepSize);
 	}
 
-	private void PlaceAtIntersection() {
-		transform.localPosition = gameControl.GetPositionFromIndices (nextIntercetion);
+	void UpdateTrailScale(float stepSize) {
+
+		// Update the trail position
+		Vector3 trailScale = trail.transform.localScale;
+		trailScale.x += stepSize;
+		trail.transform.localScale = trailScale;
+	}
+
+	void UpdateDirection() {
+		Direction[] allowedDirections = gameControl.AllowedDirections (nextIntersetion, direction);
+		
+		// Check if the current direction is allowed (if it is, then it at position 0)
+		int startIndex = 0;
+		if(allowedDirections[0] == direction) {
+			if (Random.value < keepDirectionProbability) {
+				return;
+			}
+			
+			if (allowedDirections.Length > 1) {
+				// Ignore the current direction (at position 0)
+				startIndex = 1;
+			}
+		}
+		
+		// Update the trail before applying the rotation
+		UpdateTrailDirection();
+		
+		// Otherise randomly select an allowed direction
+		direction = allowedDirections [Random.Range (startIndex, allowedDirections.Length)];
+		
+		switch (direction) {
+		case Direction.Up:
+			transform.eulerAngles = new Vector3(0, 0, 90);
+			break;
+		case Direction.Right:
+			transform.eulerAngles = new Vector3(0, 0, 0);
+			break;
+		case Direction.Down:
+			transform.eulerAngles = new Vector3(0, 0, -90);
+			break;
+		case Direction.Left:
+			transform.eulerAngles = new Vector3(0, 0, 180);
+			break;
+		}
+		
+		PlaceAtIntersection();
+	}
+
+	void UpdateTrailDirection() {
+		// Duplicate trail
+		GameObject trailSection = GameObject.Instantiate(trail);
+		trailSection.transform.localPosition = trail.transform.position;
+		trailSection.transform.localRotation = trail.transform.rotation;
+		trailSection.transform.localScale = trail.transform.lossyScale;
+
+		trailQueue.Enqueue(trailSection);
+		
+		if (trailQueue.Count > trailCount) {
+			GameObject toDiscard = trailQueue.Dequeue() as GameObject;
+			GameObject.DestroyImmediate(toDiscard);
+		}
+		
+		// Reset Trail scale
+		Vector3 trailScale = trail.transform.localScale;
+		trailScale.x = 0;
+		trail.transform.localScale = trailScale;
+		
+	}
+
+	void PlaceAtIntersection() {
+		transform.localPosition = gameControl.GetPositionFromIndices (nextIntersetion);
 	}
 }

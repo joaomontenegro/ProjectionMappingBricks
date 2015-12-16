@@ -16,6 +16,7 @@ public class MainSetup : MonoBehaviour {
 
 	private int nVerticesX = 0;
 	private int nVerticesY = 0;
+	private Vector3[] loadedVertices = null;
 	
 	// Use this for initialization
 	void Start () {
@@ -97,7 +98,6 @@ public class MainSetup : MonoBehaviour {
 		text += "NBricks: " + gameControl.nBricksX + " " + gameControl.nBricksY + "\n";
 		text += "BrickPosition: " + gameControl.brickPosition.x + " " + gameControl.brickPosition.y + "\n";
 		text += "BrickSize: " + gameControl.brickSize.x + " " + gameControl.brickSize.y + "\n";
-		text += "LightCycleSize: " + gameControl.lightCycleSize + "\n";
 		text += "TrailSize: " + gameControl.trailSize + "\n";
 		text += "Speed: " + gameControl.speed + "\n";
 		text += "NVertices: " + editorControl.nVerticesX + " "+ editorControl.nVerticesY + "\n";
@@ -119,7 +119,7 @@ public class MainSetup : MonoBehaviour {
 
 		reader.Close ();
 
-		editorControl.Init ();
+		editorControl.Init (loadedVertices);
 		gameControl.Init ();
 	}
 
@@ -134,8 +134,6 @@ public class MainSetup : MonoBehaviour {
 			return LoadBrickPosition(words);
 		case "BrickSize:":
 			return LoadBrickSize(words);
-		case "LightCycleSize:":
-			return LoadLightCycleSize(words);
 		case "TrailSize:":
 			return LoadTrailSize(words);
 		case "Speed:":
@@ -146,7 +144,7 @@ public class MainSetup : MonoBehaviour {
 			return LoadVertices(words);
 		}
 
-		Debug.LogError("Unknown word:" + words[0]);
+		Debug.LogWarning("Unknown word in settings file:" + words[0]);
 		return false;
 	}
 
@@ -177,15 +175,6 @@ public class MainSetup : MonoBehaviour {
 		}
 		float.TryParse(words [1], out gameControl.brickSize.x);
 		float.TryParse(words [2], out gameControl.brickSize.y);
-		return true;
-	}
-
-	private bool LoadLightCycleSize(string[] words) {
-		if (words.Length != 2) {
-			Debug.LogError("LoadLightCycleSize: wrong number of words:" + words.Length);
-			return false;
-		}
-		float.TryParse(words [1], out gameControl.lightCycleSize);
 		return true;
 	}
 
@@ -227,16 +216,14 @@ public class MainSetup : MonoBehaviour {
 			return false;
 		}
 
-		Vector3[] vertices = new Vector3[nVertices];
+		loadedVertices = new Vector3[nVertices];
 		int f = 1;
 
 		for (int v = 0; v < nVertices; v++) {
-			float.TryParse(words [f++], out vertices[v].x);
-			float.TryParse(words [f++], out vertices[v].y);
-			float.TryParse(words [f++], out vertices[v].z);
+			float.TryParse(words [f++], out loadedVertices[v].x);
+			float.TryParse(words [f++], out loadedVertices[v].y);
+			float.TryParse(words [f++], out loadedVertices[v].z);
 		}
-
-		editorControl.mesh.vertices = vertices;
 
 		return true;
 	}

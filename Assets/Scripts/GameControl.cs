@@ -3,11 +3,13 @@ using System.Collections;
 
 public enum Direction{Up, Right, Down, Left};
 
-public class Intercection {
+public enum CameraAnimation{None, IntoPersp, IntoOrtho};
+
+public class Intersection {
 	public int ix;
 	public int iy;
 	
-	public Intercection(int ix, int iy) {
+	public Intersection(int ix, int iy) {
 		this.ix = ix;
 		this.iy = iy;
 	}
@@ -24,30 +26,57 @@ public class GameControl : MouseMonoBehaviour {
 	public float brickPositionDragFactor = 0.1f;
 	public float brickSizeDragFactor = 0.01f;
 
-	public float lightCycleSize = 0.01f;
 	public float trailSize = 0.005f;
 	public float speed = 0.7f;
+	public float cameraSpeed = 1f;
+
+	public int nLightCycles = 2;
 
 	private GameObject brick;
 	private GameObject[] bricks = new GameObject[0];
 	private Transform brickXform;
-	
+
+	private int nIntersectionsX;
+	private int nIntersectionsY;
+
 	private Material backgroundMaterial;
+	private Material brickMaterial;
 
 	private bool showBricks = false;
 	private bool showBackground = false;
 
+	private CameraAnimation cameraAnim = CameraAnimation.None;
+	private Camera gameCamera;
+
+	private GameObject[] lightCycles;
+	
 	// Use this for initialization
 	void Start () {
+		nIntersectionsX = nBricksX * 2 + 1;
+		nIntersectionsY = nBricksY + 1;
+
 		brick = GameObject.Find ("Brick");
+		brickMaterial = brick.GetComponent<Renderer>().material;
+
 		backgroundMaterial = GameObject.Find ("GameQuad").GetComponent<Renderer>().material;
 		backgroundMaterial.color = new Color (0, 0, 0);
 
 		// Light Cycle objects
 		GameObject lightCycle = GameObject.Find ("LightCycle");
-		lightCycle.transform.localScale = new Vector3 (lightCycleSize, lightCycleSize, lightCycleSize);
 		LightCycleControl lightCycleControl = lightCycle.GetComponent<LightCycleControl> ();
 		lightCycleControl.speed = speed;
+
+		lightCycles = new GameObject[nLightCycles];
+		lightCycles [0] = lightCycle;
+
+		// Create the remainder instances of the light cycle
+		for(int i = 1; i < nLightCycles; i++) {
+			lightCycles[i] = GameObject.Instantiate(lightCycle);
+		}
+
+		InitLightCyclesColor();
+
+		gameCamera = GameObject.Find ("RenderTextureCamera").GetComponent<Camera>();
 
 		Init ();
 	} 
@@ -57,60 +86,63 @@ public class GameControl : MouseMonoBehaviour {
 		base.Update ();
 
 		ApplyKeyChanges ();
+		AnimateCamera();
 	}
 
 	public void Init() {
 		InitBricks ();
 
-		//TODO
-		GameObject lightCycle = GameObject.Find ("LightCycle");
-		lightCycle.GetComponent<LightCycleControl> ().Init ();
+		for (int i = 0; i < nLightCycles; i++) {
+			lightCycles [i].GetComponent<LightCycleControl>().Init ();
+		}
 	}
 
 	//******* Game Board API *******//
 
 	//TODO use a Position struct
-	public Vector3 GetPositionFromIndices(Intercection indices, float z=0f) {
+	public Vector3 GetPositionFromIndices(Intersection indices, float z=0f) {
 		float x = indices.ix * brickSize.x / 2 + brickPosition.x;
 		float y = indices.iy * brickSize.y + brickPosition.y - brickSize.y / 2f;
 		return new Vector3 (x, y, z);
 	}
 
 	//TODO
-	public bool isAtIntersection(Vector3 position, Intercection intercection, Direction direction) {
-		Vector3 intercectionPosition = GetPositionFromIndices (intercection);
+	public bool IsAtIntersection(Vector3 position, Intersection intersection, Direction direction) {
+		Vector3 intersectionPosition = GetPositionFromIndices (intersection);
+		bool result = false;
 		switch (direction) {
 		case Direction.Up:
-			return position.y > intercectionPosition.y;
+			return position.y > intersectionPosition.y;
 		case Direction.Right:
-			return position.x > intercectionPosition.x;
+			return position.x > intersectionPosition.x;
 		case Direction.Down:
-			return position.y < intercectionPosition.y;
+			return position.y < intersectionPosition.y;
 		case Direction.Left:
-			return position.x < intercectionPosition.x;
+			return position.x < intersectionPosition.x;
 		}
 
-		return false;
+		return result;
 	}
 
+
 	//TODO
-	public Direction[] AllowedDirections(Intercection intercection, Direction currentDirection) {
+	public Direction[] AllowedDirections(Intersection intersection, Direction currentDirection) {
 		Direction[] allowedDirections = new Direction[0];
 
 		//TODO: better corners
-		if (intercection.ix == 0) {
+		if (intersection.ix == 0) {
 			allowedDirections = new Direction[1];
 			allowedDirections [0] = Direction.Right;
 
-		} else if (intercection.ix == nBricksX * 2 - 1) {
+		} else if (intersection.ix == nIntersectionsX - 1) {
 			allowedDirections = new Direction[1];
 			allowedDirections [0] = Direction.Left;
 
-		} else if (intercection.iy == 0) {
+		} else if (intersection.iy == 0) {
 			allowedDirections = new Direction[1];
 			allowedDirections [0] = Direction.Up;
 			
-		} else if (intercection.iy == nBricksY - 1) {
+		} else if (intersection.iy == nIntersectionsY - 1) {
 			allowedDirections = new Direction[1];
 			allowedDirections [0] = Direction.Down;
 
@@ -120,17 +152,19 @@ public class GameControl : MouseMonoBehaviour {
 			allowedDirections [1] = Direction.Left;
 
 		} else {
-			if ((intercection.ix % 2 == 0 && intercection.iy % 2 == 0) 
-			    	|| (intercection.ix % 2 == 1 && intercection.iy % 2 == 1)) {
+			if ((intersection.ix % 2 == 0 && intersection.iy % 2 == 0) 
+			    	|| (intersection.ix % 2 == 1 && intersection.iy % 2 == 1)) {
 				allowedDirections = new Direction[2];
-				allowedDirections [0] = Direction.Down;
-				allowedDirections [1] = currentDirection;
+				allowedDirections [0] = currentDirection;
+				allowedDirections [1] = Direction.Down;
 
-			} else if ((intercection.ix % 2 == 0 && intercection.iy % 2 == 1) 
-			        || (intercection.ix % 2 == 1 && intercection.iy % 2 == 0)) {
+
+			} else if ((intersection.ix % 2 == 0 && intersection.iy % 2 == 1) 
+			        || (intersection.ix % 2 == 1 && intersection.iy % 2 == 0)) {
 				allowedDirections = new Direction[2];
-				allowedDirections [0] = Direction.Up;
-				allowedDirections [1] = currentDirection;
+				allowedDirections [0] = currentDirection;
+				allowedDirections [1] = Direction.Up;
+
 
 			}
 		}
@@ -139,25 +173,36 @@ public class GameControl : MouseMonoBehaviour {
 	}
 
 	//TODO
-	public Intercection GetNextIntercection(Intercection intercetion, Direction direction) {
-		Intercection nextIntercection = new Intercection(intercetion.ix, intercetion.iy);
+	public Intersection GetNextIntersection(Intersection intersetion, Direction direction) {
+		Intersection nextIntersection = new Intersection(intersetion.ix, intersetion.iy);
 
 		switch (direction) {
 		case Direction.Up:
-			nextIntercection.iy++;
+			nextIntersection.iy++;
 			break;
 		case Direction.Right:
-			nextIntercection.ix++;
+			nextIntersection.ix++;
 			break;
 		case Direction.Down:
-			nextIntercection.iy--;
+			nextIntersection.iy--;
 			break;
 		case Direction.Left:
-			nextIntercection.ix--;
+			nextIntersection.ix--;
 			break;
 		}
 
-		return nextIntercection;
+		return nextIntersection;
+	}
+
+	//**** Light Cycles ****//
+
+	void InitLightCyclesColor() {
+
+		Color[] colors = {new Color(0, 0.3f, 1), new Color(1, 0, 0), new Color(1, 0.75f, 0)};
+
+		for (int i = 0; i < lightCycles.Length; i++) {
+			lightCycles[i].GetComponent<LightCycleControl>().SetColor(colors[i % colors.Length]);
+		}
 	}
 
 	//**** Bricks and Background ****//
@@ -216,10 +261,47 @@ public class GameControl : MouseMonoBehaviour {
 		}
 		
 		if (showBackground) {
-			backgroundMaterial.color = new Color (1, 1, 1);
+			backgroundMaterial.color = new Color (0.5f, 0.5f, 0.5f);
+			brickMaterial.color = new Color(0, 0, 0);
 		} else {
 			backgroundMaterial.color = new Color (0, 0, 0);
+			brickMaterial.color = new Color(0.75f, 0, 0);
 		}
+	}
+
+	void CycleCamera() {
+
+		if (gameCamera.orthographic) {
+			cameraAnim = CameraAnimation.IntoPersp;
+			gameCamera.orthographic = false;
+		} else {
+			cameraAnim = CameraAnimation.IntoOrtho;
+		}
+	}
+
+	void AnimateCamera() {
+		if (cameraAnim == CameraAnimation.None) {
+			return;
+		}
+
+		Vector3 targetTranslate = new Vector3(0, 0, -2); // Ortho position
+		if (cameraAnim == CameraAnimation.IntoPersp) {
+			targetTranslate = new Vector3(0, -0.5f, -0.5f); // Persp position
+		}
+
+		if (Vector3.Distance(gameCamera.transform.position, targetTranslate) < 0.001f) {
+			gameCamera.transform.localPosition = targetTranslate;
+			if (cameraAnim == CameraAnimation.IntoOrtho) {
+				gameCamera.orthographic = true;
+			}
+			cameraAnim = CameraAnimation.None;
+		}
+
+		gameCamera.transform.position = Vector3.MoveTowards(gameCamera.transform.position, targetTranslate, Time.deltaTime * cameraSpeed);
+		gameCamera.transform.LookAt(new Vector3(0, 0, 0));
+
+		float distance = gameCamera.transform.position.magnitude;
+		gameCamera.fieldOfView = Mathf.Rad2Deg * 2 * Mathf.Atan(0.5f / distance);
 	}
 
 	//**** Dragging and Key Events ****//	
@@ -266,6 +348,8 @@ public class GameControl : MouseMonoBehaviour {
 
 		if (Input.GetKeyDown(KeyCode.B)) {
 			CycleBackground();
+		} else if (Input.GetKeyDown(KeyCode.C)) {
+			CycleCamera();
 		}
 
 		if (Input.GetKey(KeyCode.LeftArrow)) {

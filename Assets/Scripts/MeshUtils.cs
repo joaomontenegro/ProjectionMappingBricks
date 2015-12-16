@@ -7,14 +7,19 @@ public class MeshUtils {
 	public float selectionFalloff = 1.5f;
 
 	// Initializes a mesh with a plane with nVerticesX * nVerticesY vertices. 
-	public void InitPlane(Mesh mesh, int nVerticesX, int nVerticesY)
+	public void InitPlane(Mesh mesh, int nVerticesX, int nVerticesY, Vector3[] vertices=null)
 	{
 		mesh.Clear ();
 
 		int nVertices = nVerticesX * nVerticesY;
 		int nTriangles = (nVerticesX - 1) * (nVerticesY - 1) * 6;
+
+		bool initVertices = (vertices == null);
+
+		if (initVertices) {
+			vertices = new Vector3[nVertices];
+		}
 		
-		Vector3[] vertices = new Vector3[nVertices];
 		Vector2[] uvs = new Vector2[nVertices];
 		int[] triangles = new int[nTriangles];
 		
@@ -28,8 +33,10 @@ public class MeshUtils {
 		for(int y = 0; y < nVerticesY; y++) {
 			
 			for (int x = 0; x < nVerticesX; x++) {
-				
-				vertices[i] = new Vector3(xCoord, yCoord, 0);
+
+				if (initVertices) {
+					vertices[i] = new Vector3(xCoord, yCoord, 0);
+				}
 				uvs[i] = new Vector2(xCoord + 0.5f, yCoord + 0.5f);
 				
 				if (x < nVerticesX - 1 && y < nVerticesY - 1)

@@ -37,8 +37,14 @@ public class EditorControl : MouseMonoBehaviour {
 		base.Update ();
 	}
 
-	public void Init() {
-		meshUtils.InitPlane(mesh, nVerticesX, nVerticesY);
+	// If vertices==null then initialize the vertices with their original positions.
+	public void Init(Vector3[] vertices = null) {
+		meshUtils.InitPlane(mesh, nVerticesX, nVerticesY, vertices);
+	}
+
+	public void SetVertices(Vector3[] vertices) {
+		mesh.vertices = vertices;
+		mesh.RecalculateBounds();
 	}
 
 	//**** Dragging Events ****//
