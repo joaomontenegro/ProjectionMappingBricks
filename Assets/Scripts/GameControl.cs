@@ -74,7 +74,7 @@ public class GameControl : MouseMonoBehaviour {
 			lightCycles[i] = GameObject.Instantiate(lightCycle);
 		}
 
-		InitLightCyclesColor();
+		InitLightCyclesModel();
 
 		gameCamera = GameObject.Find ("RenderTextureCamera").GetComponent<Camera>();
 
@@ -196,13 +196,14 @@ public class GameControl : MouseMonoBehaviour {
 
 	//**** Light Cycles ****//
 
-	void InitLightCyclesColor() {
+	void InitLightCyclesModel() {
 
 		Color[] colors = {new Color(0, 0.3f, 1), new Color(1, 0, 0), new Color(1, 0.75f, 0)};
 
 		for (int i = 0; i < lightCycles.Length; i++) {
-			lightCycles[i].GetComponent<LightCycleControl>().SetColor(colors[i % colors.Length]);
-		}
+            lightCycles[i].GetComponent<LightCycleControl>().SetColor(colors[i % colors.Length]);
+            lightCycles[i].GetComponent<LightCycleControl>().SetModelIndex(i % 4);
+        }
 	}
 
 	//**** Bricks and Background ****//

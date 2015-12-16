@@ -44,12 +44,22 @@ public class LightCycleControl : MonoBehaviour {
 	}
 
 	public void SetColor(Color color) {
-		Renderer renderer = transform.GetChild(0).GetChild(0).GetComponent<Renderer>();
+		Renderer renderer = transform.GetChild(0).GetChild(0).GetChild(0).GetComponent<Renderer>();
 		renderer.material.color = color;
 
 		Renderer trailRenderer = trail.transform.GetChild(0).GetComponent<Renderer>();
 		trailRenderer.material.color = color;
 	}
+
+    public void SetModelIndex(int index)
+    {
+        Transform child = transform.GetChild(0).GetChild(index);
+        
+        for(int i = 0; i < child.GetChildCount(); i++)
+        {
+            child.GetChild(i).GetComponent<Renderer>().enabled = true;
+        }
+    }
 
 	public void clearTrail() {
 		while (trailQueue.Count > 0) {
